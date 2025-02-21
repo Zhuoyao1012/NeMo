@@ -137,23 +137,23 @@ class AdaLN_STDiTv3(MegatronModule):
             )
         ).chunk(self.n_adaln_chunks, dim=0)
 
-    @jit_fuser
+    # @jit_fuser
     def scale_add(self, residual, x, gate):
         return residual + gate * x
 
-    @jit_fuser
+    # @jit_fuser
     def scale_add_bias(self, residual, x, x_bias, gate):
         return residual + gate * (x + x_bias)
 
-    @jit_fuser
+    # @jit_fuser
     def residual_add_bias(self, residual, x, x_bias):
         return residual + x + x_bias
 
-    @jit_fuser
+    # @jit_fuser
     def modulate(self, x, shift, scale):
         return x * (1 + scale) + shift
 
-    @jit_fuser
+    # @jit_fuser
     def modulated_layernorm(self, x, shift, scale):
         # Optional Input Layer norm
         input_layernorm_output = self.ln(x).type_as(x)
@@ -161,7 +161,7 @@ class AdaLN_STDiTv3(MegatronModule):
         # DiT block specific
         return self.modulate(input_layernorm_output, shift, scale)
 
-    @jit_fuser
+    # @jit_fuser
     def add_bias_modulated_layernorm(self, residual, x, x_bias, shift, scale):
         hidden_states = self.residual_add_bias(residual, x, x_bias)
         pre_mlp_ada_norm_output = self.modulated_layernorm(hidden_states, shift, scale)

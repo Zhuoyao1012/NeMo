@@ -375,7 +375,7 @@ class STDiTConfig(DiTConfig):
 
     # forward step set
     data_step_fn = stdit_data_step
-    forward_step_fn = stdit_forward_step
+    forward_step_fn = dit_forward_step
 
     @override
     def configure_model(self, tokenizer=None) -> STDiTModel:
@@ -474,6 +474,13 @@ class DiTModel(GPTModel):
     def forward_step(self, batch) -> torch.Tensor:
         if parallel_state.is_pipeline_last_stage():
             output_batch, loss = self.diffusion_pipeline.training_step(batch, 0)
+            if len(loss.shape) == 5: # B, C, T, H ,W
+                P_t = getattr(self.config, "patch_temporal", 1)
+                P_s = getattr(self.config, "patch_spatial", 1)
+                loss = rearrange(loss, " B C_out (S_t P_t) (S_h P_h) (S_w P_w)-> B (S_t S_h S_w) (P_t P_h P_w C_out) ", 
+                                 P_t=P_t,
+                                 P_h=P_s,
+                                 P_w=P_s,)
             loss = torch.mean(loss, dim=-1)
             return loss
         else:
