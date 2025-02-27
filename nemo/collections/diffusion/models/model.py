@@ -89,6 +89,37 @@ def stdit_data_step(module, dataloader_iter):
         device=torch.cuda.current_device(),
     )
 
+    # cu_seqlens_spatial = batch['seq_len_q_s'].cumsum(dim=0).to(torch.int32)
+    # zero = torch.zeros(1, dtype=torch.int32, device="cuda")
+    # cu_seqlens_spatial = torch.cat((zero, cu_seqlens_spatial))
+
+    # cu_seqlens_temporal = batch['seq_len_q_t'].cumsum(dim=0).to(torch.int32)
+    # cu_seqlens_temporal = torch.cat((zero, cu_seqlens_temporal))
+
+    # cu_seqlens = batch['seq_len_q'].cumsum(dim=0).to(torch.int32)
+    # cu_seqlens = torch.cat((zero, cu_seqlens))
+
+    # cu_seqlens_kv = batch['seq_len_kv'].cumsum(dim=0).to(torch.int32)
+    # cu_seqlens_kv = torch.cat((zero, cu_seqlens_kv))
+
+    # batch['packed_seq_params'] = {
+    #     'spatial_attention': PackedSeqParams(
+    #         cu_seqlens_q=cu_seqlens_spatial,
+    #         cu_seqlens_kv=cu_seqlens_spatial,
+    #         qkv_format=module.qkv_format,
+    #     ),
+    #     'temporal_attention': PackedSeqParams(
+    #         cu_seqlens_q=cu_seqlens_temporal,
+    #         cu_seqlens_kv=cu_seqlens_temporal,
+    #         qkv_format=module.qkv_format,
+    #     ),
+    #     'cross_attention': PackedSeqParams(
+    #         cu_seqlens_q=cu_seqlens,
+    #         cu_seqlens_kv=cu_seqlens_kv,
+    #         qkv_format=module.qkv_format,
+    #     ),
+    # }
+
     return batch
 
 
@@ -400,9 +431,10 @@ class STDiTConfig(DiTConfig):
             in_channels=self.in_channels,
             patch_spatial=self.patch_spatial,
             patch_temporal=self.patch_temporal,
-            crossattn_emb_size=self.crossattn_emb_size,
+            caption_channels=self.crossattn_emb_size, #here we use crossattn emb size for caption channel
             dynamic_sequence_parallel=self.dynamic_sequence_parallel,
             pred_sigma=self.pred_sigma,
+            t_embed_seed=1234
         )
 
 
@@ -412,7 +444,7 @@ class STDiTV3_XLConfig(STDiTConfig):
     num_layers: int = 28
     hidden_size: int = 1152
     num_attention_heads: int = 16
-    crossattn_emb_size: int = 1024
+    crossattn_emb_size: int = 4096
     ffn_hidden_size: int = 4608
 
 
@@ -422,7 +454,7 @@ class STDiTXLConfig(STDiTConfig):
     num_layers: int = 24
     hidden_size: int = 1536
     num_attention_heads: int = 12
-    crossattn_emb_size: int = 1024
+    crossattn_emb_size: int = 4096
     ffn_hidden_size: int = 6144
 
 
@@ -432,7 +464,7 @@ class STDiT3BConfig(STDiTConfig):
     num_layers: int = 24
     hidden_size: int = 2048
     num_attention_heads: int = 16
-    crossattn_emb_size: int = 1024
+    crossattn_emb_size: int = 4096
     ffn_hidden_size: int = 8192
 
 

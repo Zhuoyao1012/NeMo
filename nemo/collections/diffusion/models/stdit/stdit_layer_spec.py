@@ -287,8 +287,12 @@ class STDiTV3LayerWithAdaLN(TransformerLayer):
         context=None,  # context, text_embedding | y [S, B, D]
         context_mask=None,  # cross attention mask
         rotary_pos_emb=None,  # rotary_pos_embeddin
+        rotary_pos_cos=None,
+        rotary_pos_sin=None,
+        attention_bias=None,
         inference_params=None,
         packed_seq_params=None,
+        sequence_len_offset=None,
     ):
 
         # timestep embedding
@@ -320,10 +324,20 @@ class STDiTV3LayerWithAdaLN(TransformerLayer):
             temporal_dim = self.config.stdit_dim_T
             spatial_dim = self.config.stdit_dim_S
 
+        # if packed_seq_params:
+        #     packed_seq_params_spatial = packed_seq_params['spatial_attention']
+        #     packed_seq_params_temporal = packed_seq_params['temporal_attention']
+        #     packed_seq_params_ca = packed_seq_params['cross_attention']
+        # else:
+        #     packed_seq_params_spatial = None
+        #     packed_seq_params_temporal = None
+        #     packed_seq_params_ca = None
+
         # spatial attention, reshape in selfattention using spatial type
         spatial_attention_output, spatial_attention_output_bias = self.spatial_self_attention(
             pre_spatial_attn_ada_norm_output,
             attention_mask=None,
+            # packed_seq_params=packed_seq_params_spatial
         )
 
         # add bias here
@@ -348,7 +362,7 @@ class STDiTV3LayerWithAdaLN(TransformerLayer):
             hidden_states,
             attention_mask=context_mask,
             key_value_states=context,
-            packed_seq_params=packed_seq_params,
+            # packed_seq_params=packed_seq_params_ca,
         )
 
         hidden_states, pre_mlp_ada_norm_output = self.spatial_adaln_stdit.add_bias_modulated_layernorm(
@@ -389,7 +403,10 @@ class STDiTV3LayerWithAdaLN(TransformerLayer):
 
         # attention
         temporal_attention_output, temporal_attention_output_bias = self.temporal_self_attention(
-            pre_temporal_attn_ada_norm_output, attention_mask=None, rotary_pos_emb=rotary_pos_emb
+            pre_temporal_attn_ada_norm_output, 
+            attention_mask=None, 
+            rotary_pos_emb=rotary_pos_emb,
+            # packed_seq_params=packed_seq_params_temporal
         )
 
         # rearrange format
@@ -412,7 +429,7 @@ class STDiTV3LayerWithAdaLN(TransformerLayer):
             hidden_states,
             attention_mask=context_mask,
             key_value_states=context,
-            packed_seq_params=packed_seq_params,
+            # packed_seq_params=packed_seq_params_ca,
         )
 
         hidden_states, pre_mlp_ada_norm_output = self.temporal_adaln_stdit.add_bias_modulated_layernorm(
@@ -466,8 +483,6 @@ def get_stdit_analn_block_with_transformer_engine_spec() -> ModuleSpec:
                     linear_kv=TEColumnParallelLinear,
                     core_attention=TEDotProductAttention,
                     linear_proj=TERowParallelLinear,
-                    q_layernorm=IdentityOp,  # in stditv3, no q_layernorm in cross_attn
-                    k_layernorm=IdentityOp,  # in stditv3, no k_layernorm in cross_attn
                 ),
             ),
             mlp_spatial=ModuleSpec(
@@ -496,8 +511,6 @@ def get_stdit_analn_block_with_transformer_engine_spec() -> ModuleSpec:
                     linear_kv=TEColumnParallelLinear,
                     core_attention=TEDotProductAttention,
                     linear_proj=TERowParallelLinear,
-                    q_layernorm=IdentityOp,  # in stditv3, no q_layernorm in cross_attn
-                    k_layernorm=IdentityOp,  # in stditv3, no k_layernorm in cross_attn
                 ),
             ),
             mlp_temporal=ModuleSpec(

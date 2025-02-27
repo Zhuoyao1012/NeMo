@@ -178,12 +178,16 @@ class STDiTVideoLatentFakeDataset(DiTVideoLatentFakeDataset):
         text_embedding = torch.randn(self.text_seqlen, self.text_dim, dtype=torch.bfloat16)
 
         # calculate seq_length
-        seq_length = t * (h // p) * (w // p)
+        seqlen_s = (h // p) * (w // p)      #seqlen spatial
+        seqlen_t = t                        #seqlen temporal
+        seq_length = seqlen_s * seqlen_t 
 
         return {
             'video': video_latent,
             't5_text_embeddings': text_embedding,
             'seq_len_q': torch.tensor([seq_length], dtype=torch.int32).squeeze(),
+            'seq_len_q_s': torch.tensor([seqlen_s], dtype=torch.int32).squeeze(),
+            'seq_len_q_t': torch.tensor([seqlen_t], dtype=torch.int32).squeeze(),
             'seq_len_kv': torch.tensor([self.text_seqlen], dtype=torch.int32).squeeze(),
             'pos_ids': torch.zeros((seq_length, 3), dtype=torch.int32),
             'loss_mask': torch.ones(seq_length, dtype=torch.bfloat16),

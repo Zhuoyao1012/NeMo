@@ -78,14 +78,13 @@ class STDiTModel(VisionModule):
         in_channels: int = 4,
         patch_spatial: int = 2,
         patch_temporal: int = 1,
-        crossattn_emb_size: int = 1152,
         input_sq_size: int = 512,  # Todo: need to check its number
         class_dropout_prob: float = 0.1,
         pred_sigma: bool = True,
         drop_path: float = 0.0,
         caption_channels: int = 4096,
-        model_max_length: int = 300,
-        skip_y_embedder: bool = True,
+        model_max_length: int = 512,
+        skip_y_embedder: bool = False,
         t_embed_seed=None,
         dynamic_sequence_parallel: bool = False,
         **kwargs,
@@ -114,7 +113,7 @@ class STDiTModel(VisionModule):
         self.patch_spatial = patch_spatial
         self.patch_temporal = patch_temporal
         self.input_sq_size = input_sq_size
-        self.config.crossattn_emb_size = crossattn_emb_size
+        # self.config.crossattn_emb_size = crossattn_emb_size
 
         # mcore pipeline scheduler need model_type attribute set
         self.model_type = ModelType.encoder_or_decoder
@@ -281,7 +280,7 @@ class STDiTModel(VisionModule):
             qkv_format = 'sbhd'
             crossattn_emb = self.encode_text(crossattn_emb.unsqueeze(1), context_mask, qkv_format)
             crossattn_emb_S_B_D = rearrange(crossattn_emb.squeeze(1), "B S D -> S B D")
-            packed_seq_params = self.gen_packed_seq_params(Batch, S * T, context_mask, qkv_format)
+            # packed_seq_params = self.gen_packed_seq_params(Batch, S * T, context_mask, qkv_format)
             context_mask = None
 
         # =============
@@ -310,6 +309,8 @@ class STDiTModel(VisionModule):
                     x_S_B_D = x_S_B_D.clone()
                 crossattn_emb_S_B_D = crossattn_emb_S_B_D.clone()
 
+        # print(x_S_B_D.shape)
+        # print(crossattn_emb_S_B_D.shape)
         # decoder part
         x_S_B_D = self.decoder_spatial_temporal(
             hidden_states=x_S_B_D,
